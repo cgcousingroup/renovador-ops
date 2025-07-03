@@ -2,7 +2,7 @@ import json
 import asyncio
 from datetime import datetime
 from pytz import timezone
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import Bot
 
 # CONFIGURAÇÕES
@@ -48,23 +48,21 @@ async def enviar_relatorio():
     texto = gerar_relatorio()
     await bot.send_message(chat_id=CHAT_ID, text=texto, parse_mode='Markdown')
 
-def agendar():
-    scheduler = BackgroundScheduler(timezone=TIMEZONE)
+async def main():
+    # Envia uma vez ao iniciar
+    await enviar_relatorio()
 
-    # ✅ Envia todos os dias às 12h00 e às 23h00
-    scheduler.add_job(lambda: asyncio.run(enviar_relatorio()), 'cron', hour=12, minute=0)
-    scheduler.add_job(lambda: asyncio.run(enviar_relatorio()), 'cron', hour=23, minute=0)
-
+    # Agenda os próximos envios
+    scheduler = AsyncIOScheduler(timezone=TIMEZONE)
+    scheduler.add_job(enviar_relatorio, 'cron', hour=12, minute=0)
+    scheduler.add_job(enviar_relatorio, 'cron', hour=23, minute=0)
     scheduler.start()
 
-if __name__ == '__main__':
-    asyncio.run(enviar_relatorio())  # Envia ao iniciar uma vez
-    agendar()
-
     print("Bot está rodando. Pressione Ctrl+C para sair.")
-    import time
-    try:
-        while True:
-            time.sleep(10)
-    except (KeyboardInterrupt, SystemExit):
-        print("Bot finalizado.")
+    
+    # Mantém o script vivo
+    while True:
+        await asyncio.sleep(10)
+
+if __name__ == '__main__':
+    asyncio.run(main())
